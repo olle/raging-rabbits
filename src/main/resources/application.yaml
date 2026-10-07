@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: raging-rabbits
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+    # Fail fast with a clear error if the broker is down at startup.
+    # (Set to false if you want the app to stay up and retry via the admin.)
+    # connection-timeout: 5s
+
+app:
+  # Baseline: individual clients, each with 1 queue + topic/fanout bindings (see below).
+  clients: ${CLIENTS:20000}
+  exchange: ${EXCHANGE:clients.topic}
+  # Topic bindings per client queue (keys <routing-key-prefix><id>.s1..sN). Baseline range is 5-7.
+  topic-bindings: ${TOPIC_BINDINGS:7}
+  # Shared fanout exchanges, one binding per client queue each. Baseline range is 2-3.
+  fanout-exchanges: ${FANOUT_EXCHANGES:broadcast.alpha,broadcast.beta,broadcast.gamma}
+  # Parallel declaration threads.
+  concurrency: ${CONCURRENCY:8}
+  queue-prefix: ${QUEUE_PREFIX:client.}
+  # routing-key-prefix defaults to queue-prefix; override with ROUTING_KEY_PREFIX if needed
+  routing-key-prefix: ${ROUTING_KEY_PREFIX:}
+  durable: ${DURABLE:true}
+  log-every: ${LOG_EVERY:1000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
