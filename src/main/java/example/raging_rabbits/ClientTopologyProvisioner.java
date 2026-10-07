@@ -66,20 +66,20 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
       return;
     }
     List<String> contexts =
-        props.getTopicContexts().stream().filter(c -> c != null && !c.isBlank()).toList();
-    int topicKeys = Math.min(3, Math.max(0, props.getTopicKeys()));
-    if (topicKeys != props.getTopicKeys()) {
+        props.getTopics().stream().filter(c -> c != null && !c.isBlank()).toList();
+    int topicKeys = Math.min(3, Math.max(0, props.getKeys()));
+    if (topicKeys != props.getKeys()) {
       log.warn(
-          "app.topic-keys={} clamped to {} (at most 3 routing keys per client per context exchange).",
-          props.getTopicKeys(),
+          "app.keys={} clamped to {} (at most 3 routing keys per client per context exchange).",
+          props.getKeys(),
           topicKeys);
     }
     List<String> fanoutNames =
-        props.getFanoutExchanges().stream().filter(n -> n != null && !n.isBlank()).toList();
+        props.getFanouts().stream().filter(n -> n != null && !n.isBlank()).toList();
     int concurrency = Math.max(1, props.getConcurrency());
     int logEvery = Math.max(1, props.getLogEvery());
 
-    String suffix = props.getTopicExchangeSuffix();
+    String suffix = props.getTopicSuffix();
     List<TopicExchange> topics =
         contexts.stream()
             .map(c -> new TopicExchange(c + "." + suffix, true, false))

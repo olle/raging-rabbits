@@ -14,7 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * <pre>
  * CLIENTS=20000 ./mvnw spring-boot:run
- * CLIENTS=20000 TOPIC_CONTEXTS=orders,payments,shipping TOPIC_KEYS=3 java -jar target/raging-rabbits-*.jar
+ * CLIENTS=20000 TOPICS=orders,payments,shipping KEYS=3 java -jar target/raging-rabbits-*.jar
  * </pre>
  */
 @ConfigurationProperties(prefix = "app")
@@ -24,23 +24,23 @@ public class RagingClientsProperties {
   private int clients = 20000;
 
   /**
-   * Bounded contexts, one topic exchange each ({@code <context>.<topic-exchange-suffix>}).
-   * Default 6 of the 5-7 range; override with {@code TOPIC_CONTEXTS} (comma-separated).
+   * Bounded contexts, one topic exchange each ({@code <context>.<topic-suffix>}).
+   * Default 6 of the 5-7 range; override with {@code TOPICS} (comma-separated).
    */
-  private List<String> topicContexts =
+  private List<String> topics =
       new ArrayList<>(List.of("orders", "payments", "shipping", "notifications", "billing", "inventory"));
 
   /** Suffix for per-context topic exchanges: {@code orders} -> {@code orders.events}. */
-  private String topicExchangeSuffix = "events";
+  private String topicSuffix = "events";
 
   /**
    * Routing keys bound per client per context exchange (1-3, clamped to max 3).
    * Keys look like {@code client.000001.order.created}. Default 2 (typical of the 1-3 range).
    */
-  private int topicKeys = 2;
+  private int keys = 2;
 
   /** Shared fanout exchanges; each client queue gets one binding to each of them. */
-  private List<String> fanoutExchanges =
+  private List<String> fanouts =
       new ArrayList<>(List.of("broadcast.announcements", "broadcast.alerts", "broadcast.config"));
 
   /** Queue name prefix. Final name is {@code <prefix><zero-padded id>}, e.g. {@code client.000001}. */
@@ -66,36 +66,36 @@ public class RagingClientsProperties {
     this.clients = clients;
   }
 
-  public List<String> getTopicContexts() {
-    return topicContexts;
+  public List<String> getTopics() {
+    return topics;
   }
 
-  public void setTopicContexts(List<String> topicContexts) {
-    this.topicContexts = topicContexts;
+  public void setTopics(List<String> topics) {
+    this.topics = topics;
   }
 
-  public String getTopicExchangeSuffix() {
-    return topicExchangeSuffix;
+  public String getTopicSuffix() {
+    return topicSuffix;
   }
 
-  public void setTopicExchangeSuffix(String topicExchangeSuffix) {
-    this.topicExchangeSuffix = topicExchangeSuffix;
+  public void setTopicSuffix(String topicSuffix) {
+    this.topicSuffix = topicSuffix;
   }
 
-  public int getTopicKeys() {
-    return topicKeys;
+  public int getKeys() {
+    return keys;
   }
 
-  public void setTopicKeys(int topicKeys) {
-    this.topicKeys = topicKeys;
+  public void setKeys(int keys) {
+    this.keys = keys;
   }
 
-  public List<String> getFanoutExchanges() {
-    return fanoutExchanges;
+  public List<String> getFanouts() {
+    return fanouts;
   }
 
-  public void setFanoutExchanges(List<String> fanoutExchanges) {
-    this.fanoutExchanges = fanoutExchanges;
+  public void setFanouts(List<String> fanouts) {
+    this.fanouts = fanouts;
   }
 
   public String getQueuePrefix() {

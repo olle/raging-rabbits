@@ -6,9 +6,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest(
     properties = {
       "app.clients=5",
-      "app.topic-contexts=orders,payments",
-      "app.topic-keys=1",
-      "app.fanout-exchanges=test.broadcast",
+      "app.topics=orders,payments",
+      "app.keys=1",
+      "app.fanouts=test.broadcast",
       "app.concurrency=2",
       "app.log-every=5"
     })

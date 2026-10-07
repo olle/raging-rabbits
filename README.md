@@ -31,9 +31,9 @@ plus `build`, `test`, `clean`.)
 | Var | Default | Meaning |
 |---|---|---|
 | `CLIENTS` | `20000` | Client queues to create |
-| `TOPIC_CONTEXTS` | `orders,payments,shipping,notifications,billing,inventory` | Bounded contexts, one topic exchange (`<ctx>.events`) each |
-| `TOPIC_KEYS` | `2` | Routing keys per client per context exchange (1–3, at most 3) |
-| `FANOUT_EXCHANGES` | `broadcast.announcements,broadcast.alerts,broadcast.config` | Shared fanout exchanges (one binding per queue each) |
+| `TOPICS` | `orders,payments,shipping,notifications,billing,inventory` | Bounded contexts, one topic exchange (`<ctx>.events`) each |
+| `KEYS` | `2` | Routing keys per client per context exchange (1–3, at most 3) |
+| `FANOUTS` | `broadcast.announcements,broadcast.alerts,broadcast.config` | Shared fanout exchanges (one binding per queue each) |
 | `CONCURRENCY` | `8` | Parallel declaration threads |
 | `SPRING_RABBITMQ_HOST` / `SPRING_RABBITMQ_PORT` | `localhost` / `5672` | Broker endpoint |
 | `LOG_EVERY` | `1000` | Progress logging interval (clients) |
@@ -41,7 +41,7 @@ plus `build`, `test`, `clean`.)
 Baseline result on a dev machine: 20000 clients × (1 queue + 6 contexts × 2 keys
 + 3 fanout bindings) = 320000 objects; app idles at ~120MB RSS while the broker
 holds the queue metadata — broker RAM is the binding constraint. Worst case
-(`TOPIC_CONTEXTS` with 7 contexts, `TOPIC_KEYS=3`) is 22 objects per client.
+(`TOPICS` with 7 contexts, `KEYS=3`) is 22 objects per client.
 
 ## Tests
 
