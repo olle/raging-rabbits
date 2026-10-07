@@ -37,13 +37,15 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
 
   private final RagingClientsProperties props;
   private final RabbitTemplate rabbitTemplate;
+  private final RunStats stats;
 
   private volatile boolean running;
   private Thread thread;
 
-  public NoisePublisher(RagingClientsProperties props, RabbitTemplate rabbitTemplate) {
+  public NoisePublisher(RagingClientsProperties props, RabbitTemplate rabbitTemplate, RunStats stats) {
     this.props = props;
     this.rabbitTemplate = rabbitTemplate;
+    this.stats = stats;
   }
 
   @Override
@@ -51,6 +53,7 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
     double rate = rateFor(props.getNoise());
     if (rate <= 0) {
       log.info("Noise off (app.noise='{}'). Topology stays silent.", props.getNoise());
+      stats.noiseSilent();
       return;
     }
     List<String> contexts =
@@ -73,6 +76,7 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
         props.getNoiseTtlMs());
 
     running = true;
+    stats.beginNoise(rate);
     thread = new Thread(() -> loop(rate, plan), "noise-publisher");
     thread.setDaemon(true);
     thread.start();
@@ -86,9 +90,7 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
       try {
         publishOne(seq, plan.get((int) (seq % plan.size())));
         seq++;
-        if (seq % 1000 == 0) {
-          log.info("Noise: {} messages published", seq);
-        }
+        stats.noisePublished();
       } catch (AmqpException e) {
         log.warn("Noise publish failed (seq {}): {}", seq, e.getMessage());
       }

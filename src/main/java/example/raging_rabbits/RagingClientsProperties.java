@@ -64,8 +64,11 @@ public class RagingClientsProperties {
   /** Per-message TTL (ms) for noise so it evaporates instead of filling queues without bound. */
   private long noiseTtlMs = 30000;
 
-  /** Log progress every N clients. */
-  private int logEvery = 1000;
+  /**
+   * Status monitor rendering: {@code auto} (TTY-aware, default), {@code console} (force ANSI
+   * screen), or {@code log} (periodic summary lines).
+   */
+  private String monitor = "auto";
 
   public int getClients() {
     return clients;
@@ -155,11 +158,11 @@ public class RagingClientsProperties {
     this.noiseTtlMs = noiseTtlMs;
   }
 
-  public int getLogEvery() {
-    return logEvery;
+  public String getMonitor() {
+    return monitor;
   }
 
-  public void setLogEvery(int logEvery) {
-    this.logEvery = logEvery;
+  public void setMonitor(String monitor) {
+    this.monitor = monitor;
   }
 }

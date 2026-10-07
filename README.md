@@ -26,6 +26,10 @@ make baseline-single CLIENTS=5000
 (`make help` lists all targets: per-architecture `up/down/reset/baseline`,
 plus `build`, `test`, `clean`.)
 
+While a run is active, a live status screen shows phase, topology progress
+(rate + ETA), and noise throughput — in place on a terminal, or as periodic
+summary lines when piped (`MONITOR=log` forces the latter).
+
 ## App configuration (env)
 
 | Var | Default | Meaning |
@@ -38,7 +42,7 @@ plus `build`, `test`, `clean`.)
 | `NOISE` | `off` | Messaging noise after provisioning: `low` (5/s), `medium` (25/s), `high` (100/s), or a custom msg/s number |
 | `NOISE_TTL_MS` | `30000` | Per-message TTL for noise (self-cleaning) |
 | `SPRING_RABBITMQ_HOST` / `SPRING_RABBITMQ_PORT` | `localhost` / `5672` | Broker endpoint |
-| `LOG_EVERY` | `1000` | Progress logging interval (clients) |
+| `MONITOR` | `auto` | Status overview: `auto` (TTY-aware), `console` (force ANSI screen), `log` (summary lines) |
 
 Baseline result on a dev machine: 20000 clients × (1 queue + 6 contexts × 2 keys
 + 3 fanout bindings) = 320000 objects; app idles at ~120MB RSS while the broker

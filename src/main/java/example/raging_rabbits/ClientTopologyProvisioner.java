@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
@@ -37,10 +36,12 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
 
   private final RagingClientsProperties props;
   private final RabbitAdmin rabbitAdmin;
+  private final RunStats stats;
 
-  public ClientTopologyProvisioner(RagingClientsProperties props, RabbitAdmin rabbitAdmin) {
+  public ClientTopologyProvisioner(RagingClientsProperties props, RabbitAdmin rabbitAdmin, RunStats stats) {
     this.props = props;
     this.rabbitAdmin = rabbitAdmin;
+    this.stats = stats;
   }
 
   @Override
@@ -62,7 +63,6 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
     List<String> fanoutNames =
         props.getFanouts().stream().filter(n -> n != null && !n.isBlank()).toList();
     int concurrency = Math.max(1, props.getConcurrency());
-    int logEvery = Math.max(1, props.getLogEvery());
 
     List<TopicExchange> topics =
         contexts.stream()
@@ -76,6 +76,7 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
     long bindingsPerClient = (long) contexts.size() * topicKeys + fanouts.size();
     long totalObjects = (long) clients * (1 + bindingsPerClient);
     int width = ClientKeyspace.widthFor(clients);
+    stats.beginProvision(clients, 1 + bindingsPerClient);
     log.info(
         "Declaring topology: {} clients x (1 queue + {} contexts x {} keys + {} fanout bindings) = {} objects"
             + " (topics {}, fanouts {}, {} threads). First queue: '{}'.",
@@ -90,7 +91,6 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
         ClientKeyspace.queueName(props.getQueuePrefix(), 1, width));
 
     ExecutorService pool = Executors.newFixedThreadPool(concurrency);
-    AtomicInteger done = new AtomicInteger();
     AtomicReference<RuntimeException> failure = new AtomicReference<>();
     long start = System.nanoTime();
 
@@ -100,17 +100,7 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
           () -> {
             try {
               declareOne(n, width, contexts, topics, topicKeys, fanouts);
-              int d = done.incrementAndGet();
-              if (d == clients || d % logEvery == 0) {
-                synchronized (log) {
-                  double elapsedSec = (System.nanoTime() - start) / 1_000_000_000.0;
-                  log.info(
-                      "Progress: {}/{} clients ({} objects/s)",
-                      d,
-                      clients,
-                      String.format("%.0f", totalObjects * d / clients / Math.max(elapsedSec, 0.001)));
-                }
-              }
+              stats.clientDone();
             } catch (RuntimeException e) {
               failure.compareAndSet(null, e);
             }
@@ -130,6 +120,7 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
     if (failure.get() != null) {
       throw new IllegalStateException("Topology declaration failed", failure.get());
     }
+    stats.endProvision();
 
     double totalSec = (System.nanoTime() - start) / 1_000_000_000.0;
     log.info(
