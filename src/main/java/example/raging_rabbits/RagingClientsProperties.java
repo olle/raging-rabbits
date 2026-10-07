@@ -76,8 +76,11 @@ public class RagingClientsProperties {
    */
   private String consumers = "all";
 
-  /** Shared channels the drain consumers multiplex over. */
+  /** Shared channels the drain consumers multiplex over (spread across drain connections). */
   private int drainChannels = 16;
+
+  /** Drain connections consumers spread over (isolates delivery dispatch from control RPCs). */
+  private int drainConnections = 4;
 
   public int getClients() {
     return clients;
@@ -189,5 +192,13 @@ public class RagingClientsProperties {
 
   public void setDrainChannels(int drainChannels) {
     this.drainChannels = drainChannels;
+  }
+
+  public int getDrainConnections() {
+    return drainConnections;
+  }
+
+  public void setDrainConnections(int drainConnections) {
+    this.drainConnections = drainConnections;
   }
 }

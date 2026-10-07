@@ -1,9 +1,7 @@
 package example.raging_rabbits;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 import com.rabbitmq.client.Channel;
 import org.slf4j.Logger;
@@ -17,16 +15,27 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
- * Scalable drain-only consumers: one auto-ack consumer per client queue, multiplexed over a
- * small pool of shared channels. Messages are acknowledged on delivery with no handling and
- * no per-message logging — only a counter feeds the status screen. This keeps queue depths
- * (and broker memory) bounded while noise is publishing.
+ * Scalable drain-only consumers: one auto-ack consumer per client queue, spread over several
+ * connections with a small pool of shared channels each. Messages are acknowledged on delivery
+ * with no handling and no per-message logging — only a counter feeds the status screen. This
+ * keeps queue depths (and broker memory) bounded while noise is publishing.
+ *
+ * <p>Two scaling rules matter here, learned the hard way:
+ *
+ * <ul>
+ *   <li>Consumers attach <em>before</em> the noise publisher starts ({@code @Order(15)} vs
+ *       {@code 20}), so registration RPCs complete on a silent broker. Attaching while a
+ *       delivery flood is already flowing can starve the Consume-Ok replies on a shared
+ *       connection and stall registration partway.
+ *   <li>Consumers spread over {@code DRAIN_CONNECTIONS} connections (default 4) instead of one,
+ *       so delivery dispatch and control RPCs don't share a single connection pipeline.
+ * </ul>
  *
  * <p>{@code app.consumers} / {@code CONSUMERS}: {@code all} (default, every client queue),
- * {@code off}, or a number (first N queues). Channels via {@code DRAIN_CHANNELS} (default 16).
+ * {@code off}, or a number (first N queues).
  */
 @Component
-@Order(30)
+@Order(15)
 public class NoiseConsumers implements ApplicationRunner, DisposableBean {
 
   private static final Logger log = LoggerFactory.getLogger(NoiseConsumers.class);
@@ -35,9 +44,8 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
   private final ConnectionFactory connectionFactory;
   private final RunStats stats;
 
-  private Connection connection;
+  private final List<Connection> connections = new ArrayList<>();
   private final List<Channel> channels = new ArrayList<>();
-  private final List<ConsumerHandle> consumers = new ArrayList<>();
 
   public NoiseConsumers(
       RagingClientsProperties props, ConnectionFactory connectionFactory, RunStats stats) {
@@ -53,21 +61,29 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
       log.info("Drain consumers off (app.consumers='{}').", props.getConsumers());
       return;
     }
-    int channelCount = Math.min(64, Math.max(1, props.getDrainChannels()));
+    int connectionCount = Math.min(Math.max(1, props.getDrainConnections()), count);
+    int totalChannels = Math.max(connectionCount, props.getDrainChannels());
     int width = ClientKeyspace.widthFor(props.getClients());
 
-    connection = connectionFactory.createConnection();
-    for (int i = 0; i < channelCount; i++) {
-      channels.add(connection.createChannel(false));
+    for (int i = 0; i < connectionCount; i++) {
+      Connection connection = connectionFactory.createConnection();
+      connections.add(connection);
+      int channelsForThis = totalChannels / connectionCount + (i < totalChannels % connectionCount ? 1 : 0);
+      for (int c = 0; c < channelsForThis; c++) {
+        channels.add(connection.createChannel(false));
+      }
     }
     for (int n = 1; n <= count; n++) {
       Channel channel = channels.get((n - 1) % channels.size());
       String queue = ClientKeyspace.queueName(props.getQueuePrefix(), n, width);
-      String tag = channel.basicConsume(queue, true, (consumerTag, delivery) -> stats.consumed(), consumerTag -> {});
-      consumers.add(new ConsumerHandle(channel, tag));
+      channel.basicConsume(queue, true, (consumerTag, delivery) -> stats.consumed(), consumerTag -> {});
     }
-    stats.beginDrain(count, channelCount);
-    log.info("Drain on: {} consumers across {} channels (auto-ack, counting only).", count, channelCount);
+    stats.beginDrain(count, connectionCount, channels.size());
+    log.info(
+        "Drain on: {} consumers across {} connections / {} channels (auto-ack, counting only).",
+        count,
+        connectionCount,
+        channels.size());
   }
 
   private int resolveCount() {
@@ -88,27 +104,25 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
 
   @Override
   public void destroy() {
-    for (ConsumerHandle handle : consumers) {
-      try {
-        handle.channel().basicCancel(handle.tag());
-      } catch (IOException e) {
-        log.debug("Cancel failed: {}", e.getMessage());
-      }
-    }
-    consumers.clear();
+    // Closing a connection drops all of its consumers server-side at once: no per-consumer
+    // cancel RPCs (which could stall the same way registration did under load).
     for (Channel channel : channels) {
       try {
-        channel.close();
-      } catch (IOException | TimeoutException e) {
+        if (channel.isOpen()) {
+          channel.close();
+        }
+      } catch (Exception e) {
         log.debug("Channel close failed: {}", e.getMessage());
       }
     }
     channels.clear();
-    if (connection != null) {
-      connection.close();
-      connection = null;
+    for (Connection connection : connections) {
+      try {
+        connection.close();
+      } catch (Exception e) {
+        log.debug("Connection close failed: {}", e.getMessage());
+      }
     }
+    connections.clear();
   }
-
-  private record ConsumerHandle(Channel channel, String tag) {}
 }

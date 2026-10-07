@@ -36,6 +36,7 @@ app:
   # Drain consumers: all|off|<n first queues>. Auto-ack, counting only.
   consumers: ${CONSUMERS:all}
   drain-channels: ${DRAIN_CHANNELS:16}
+  drain-connections: ${DRAIN_CONNECTIONS:4}
 
 management:
   endpoints:

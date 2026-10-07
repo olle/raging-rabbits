@@ -18,9 +18,11 @@ FANOUTS ?= broadcast.announcements,broadcast.alerts,broadcast.config
 CONCURRENCY ?= 8
 NOISE ?= off
 CONSUMERS ?= all
+DRAIN_CONNECTIONS ?= 4
 
 BASELINE_ENV = CLIENTS=$(CLIENTS) TOPICS="$(TOPICS)" KEYS=$(KEYS) \
-	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY) NOISE=$(NOISE) CONSUMERS=$(CONSUMERS)
+	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY) NOISE=$(NOISE) CONSUMERS=$(CONSUMERS) \
+	DRAIN_CONNECTIONS=$(DRAIN_CONNECTIONS)
 
 .PHONY: help build test clean
 .PHONY: up-single down-single reset-single baseline-single

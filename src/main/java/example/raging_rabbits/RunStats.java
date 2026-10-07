@@ -33,6 +33,7 @@ public class RunStats {
   private final AtomicLong noisePublished = new AtomicLong();
 
   private volatile int drainConsumers;
+  private volatile int drainConnections;
   private volatile int drainChannels;
   private volatile long drainStartNanos;
   private final AtomicLong consumed = new AtomicLong();
@@ -62,8 +63,9 @@ public class RunStats {
     this.phase = Phase.NOISE_RUNNING;
   }
 
-  void beginDrain(int consumers, int channels) {
+  void beginDrain(int consumers, int connections, int channels) {
     this.drainConsumers = consumers;
+    this.drainConnections = connections;
     this.drainChannels = channels;
     this.drainStartNanos = System.nanoTime();
   }
@@ -110,6 +112,10 @@ public class RunStats {
 
   int drainConsumers() {
     return drainConsumers;
+  }
+
+  int drainConnections() {
+    return drainConnections;
   }
 
   int drainChannels() {
