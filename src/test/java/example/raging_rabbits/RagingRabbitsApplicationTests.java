@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
       "app.keys=1",
       "app.fanouts=test.broadcast",
       "app.noise=off",
+      "app.consumers=2",
       "app.monitor=log"
     })
 class RagingRabbitsApplicationTests {

@@ -106,6 +106,7 @@ public class ConsoleMonitor implements ApplicationRunner, DisposableBean {
                 RunStats.formatDuration(stats.provisionEtaSeconds())));
     lines.add("objects  %,d / %,d declared".formatted(stats.objectsDeclared(), stats.totalObjects()));
     lines.add("noise    " + noiseLabel());
+    lines.add("drain    " + drainLabel());
     lines.add("elapsed  " + RunStats.formatDuration(stats.elapsedSeconds()));
     return lines;
   }
@@ -131,8 +132,16 @@ public class ConsoleMonitor implements ApplicationRunner, DisposableBean {
         .formatted(stats.targetNoiseRate(), stats.noiseActualRate(), stats.noisePublishedCount());
   }
 
+  private String drainLabel() {
+    if (!stats.drainActive()) {
+      return "off";
+    }
+    return "on · %,d consumers / %d channels · %,d consumed (%,.1f/s)"
+        .formatted(stats.drainConsumers(), stats.drainChannels(), stats.consumedCount(), stats.drainRate());
+  }
+
   private String oneLiner() {
-    return "phase=%s clients=%d/%d objs=%,d (%,.0f/s, ETA %s) noise=%,d pub (%,.1f/s) elapsed=%s"
+    return "phase=%s clients=%d/%d objs=%,d (%,.0f/s, ETA %s) noise=%,d pub (%,.1f/s) drain=%,d (%,.1f/s) elapsed=%s"
         .formatted(
             stats.phase(),
             stats.clientsDone(),
@@ -142,6 +151,8 @@ public class ConsoleMonitor implements ApplicationRunner, DisposableBean {
             RunStats.formatDuration(stats.provisionEtaSeconds()),
             stats.noisePublishedCount(),
             stats.noiseActualRate(),
+            stats.consumedCount(),
+            stats.drainRate(),
             RunStats.formatDuration(stats.elapsedSeconds()));
   }
 
@@ -156,20 +167,22 @@ public class ConsoleMonitor implements ApplicationRunner, DisposableBean {
       synchronized (System.out) {
         System.out.print("\033[" + lines.size() + "A");
         lines.forEach(l -> System.out.print(l + "\033[K\n"));
-        System.out.println("run complete · %,d clients · %,d objects · %,d noise msgs · %s elapsed"
+        System.out.println("run complete · %,d clients · %,d objects · %,d noise msgs · %,d consumed · %s elapsed"
             .formatted(
                 stats.clientsDone(),
                 stats.objectsDeclared(),
                 stats.noisePublishedCount(),
+                stats.consumedCount(),
                 RunStats.formatDuration(stats.elapsedSeconds())));
         System.out.flush();
       }
     } else {
       log.info(
-          "run complete · {} clients · {} objects · {} noise msgs · {} elapsed",
+          "run complete · {} clients · {} objects · {} noise msgs · {} consumed · {} elapsed",
           String.format("%,d", stats.clientsDone()),
           String.format("%,d", stats.objectsDeclared()),
           String.format("%,d", stats.noisePublishedCount()),
+          String.format("%,d", stats.consumedCount()),
           RunStats.formatDuration(stats.elapsedSeconds()));
     }
   }

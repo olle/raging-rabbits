@@ -32,6 +32,11 @@ public class RunStats {
   private volatile long noiseStartNanos;
   private final AtomicLong noisePublished = new AtomicLong();
 
+  private volatile int drainConsumers;
+  private volatile int drainChannels;
+  private volatile long drainStartNanos;
+  private final AtomicLong consumed = new AtomicLong();
+
   void beginProvision(int totalClients, long objectsPerClient) {
     this.totalClients = totalClients;
     this.objectsPerClient = objectsPerClient;
@@ -55,6 +60,16 @@ public class RunStats {
 
   void noiseSilent() {
     this.phase = Phase.NOISE_RUNNING;
+  }
+
+  void beginDrain(int consumers, int channels) {
+    this.drainConsumers = consumers;
+    this.drainChannels = channels;
+    this.drainStartNanos = System.nanoTime();
+  }
+
+  void consumed() {
+    consumed.incrementAndGet();
   }
 
   void noisePublished() {
@@ -87,6 +102,30 @@ public class RunStats {
 
   long noisePublishedCount() {
     return noisePublished.get();
+  }
+
+  boolean drainActive() {
+    return drainStartNanos != 0;
+  }
+
+  int drainConsumers() {
+    return drainConsumers;
+  }
+
+  int drainChannels() {
+    return drainChannels;
+  }
+
+  long consumedCount() {
+    return consumed.get();
+  }
+
+  double drainRate() {
+    if (!drainActive()) {
+      return 0;
+    }
+    double elapsed = (System.nanoTime() - drainStartNanos) / 1_000_000_000.0;
+    return consumed.get() / Math.max(elapsed, 0.001);
   }
 
   double targetNoiseRate() {

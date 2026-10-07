@@ -70,6 +70,15 @@ public class RagingClientsProperties {
    */
   private String monitor = "auto";
 
+  /**
+   * Drain consumers: {@code all} (default, one auto-ack consumer per client queue),
+   * {@code off}, or a number (first N queues).
+   */
+  private String consumers = "all";
+
+  /** Shared channels the drain consumers multiplex over. */
+  private int drainChannels = 16;
+
   public int getClients() {
     return clients;
   }
@@ -164,5 +173,21 @@ public class RagingClientsProperties {
 
   public void setMonitor(String monitor) {
     this.monitor = monitor;
+  }
+
+  public String getConsumers() {
+    return consumers;
+  }
+
+  public void setConsumers(String consumers) {
+    this.consumers = consumers;
+  }
+
+  public int getDrainChannels() {
+    return drainChannels;
+  }
+
+  public void setDrainChannels(int drainChannels) {
+    this.drainChannels = drainChannels;
   }
 }

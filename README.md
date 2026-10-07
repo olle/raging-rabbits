@@ -41,6 +41,8 @@ summary lines when piped (`MONITOR=log` forces the latter).
 | `CONCURRENCY` | `8` | Parallel declaration threads |
 | `NOISE` | `off` | Messaging noise after provisioning: `low` (5/s), `medium` (25/s), `high` (100/s), or a custom msg/s number |
 | `NOISE_TTL_MS` | `30000` | Per-message TTL for noise (self-cleaning) |
+| `CONSUMERS` | `all` | Drain consumers: `all`, `off`, or first N queues (auto-ack, counting only) |
+| `DRAIN_CHANNELS` | `16` | Shared channels the drain consumers multiplex over |
 | `SPRING_RABBITMQ_HOST` / `SPRING_RABBITMQ_PORT` | `localhost` / `5672` | Broker endpoint |
 | `MONITOR` | `auto` | Status overview: `auto` (TTY-aware), `console` (force ANSI screen), `log` (summary lines) |
 
