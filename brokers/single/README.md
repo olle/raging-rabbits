@@ -6,7 +6,8 @@ Used for client-topology scale tests (queue/binding counts).
 ## Run
 
 ```bash
-docker compose -f brokers/single/compose.yaml up -d
+make up-single
+# or raw: docker compose -f brokers/single/compose.yaml up -d
 ```
 
 Management UI: http://localhost:15672 (guest/guest). AMQP: `localhost:5672`.
@@ -14,14 +15,14 @@ Management UI: http://localhost:15672 (guest/guest). AMQP: `localhost:5672`.
 Fresh reset (deletes all queues/exchanges — data lives in the container):
 
 ```bash
-docker compose -f brokers/single/compose.yaml down
-docker compose -f brokers/single/compose.yaml up -d
+make reset-single
 ```
 
 ## Point the app at it
 
 ```bash
-CLIENTS=20000 ./mvnw spring-boot:run
+make baseline-single            # CLIENTS=20000 default
+make baseline-single CLIENTS=5000
 ```
 
 (`SPRING_RABBITMQ_HOST`/`SPRING_RABBITMQ_PORT` default to `localhost:5672`,

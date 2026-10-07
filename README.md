@@ -18,9 +18,12 @@ broker architectures to serve them.
 ## Quickstart
 
 ```bash
-docker compose -f brokers/single/compose.yaml up -d
-CLIENTS=20000 ./mvnw spring-boot:run
+make baseline-single            # starts brokers/single + runs CLIENTS=20000
+make baseline-single CLIENTS=5000
 ```
+
+(`make help` lists all targets: per-architecture `up/down/reset/baseline`,
+plus `build`, `test`, `clean`.)
 
 ## App configuration (env)
 
