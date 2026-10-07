@@ -13,11 +13,14 @@ spring:
 app:
   # Baseline: individual clients, each with 1 queue + topic/fanout bindings (see below).
   clients: ${CLIENTS:20000}
-  exchange: ${EXCHANGE:clients.topic}
-  # Topic bindings per client queue (keys <routing-key-prefix><id>.s1..sN). Baseline range is 5-7.
-  topic-bindings: ${TOPIC_BINDINGS:7}
-  # Shared fanout exchanges, one binding per client queue each. Baseline range is 2-3.
-  fanout-exchanges: ${FANOUT_EXCHANGES:broadcast.alpha,broadcast.beta,broadcast.gamma}
+  # Bounded contexts (DDD), one topic exchange each (<context>.<topic-exchange-suffix>).
+  # Baseline range is 5-7 exchanges.
+  topic-contexts: ${TOPIC_CONTEXTS:orders,payments,shipping,notifications,billing,inventory}
+  topic-exchange-suffix: ${TOPIC_EXCHANGE_SUFFIX:events}
+  # Routing keys bound per client per context exchange (1-3, at most 3).
+  topic-keys: ${TOPIC_KEYS:2}
+  # Shared fanout exchanges, one binding per client queue each (same info for all clients).
+  fanout-exchanges: ${FANOUT_EXCHANGES:broadcast.announcements,broadcast.alerts,broadcast.config}
   # Parallel declaration threads.
   concurrency: ${CONCURRENCY:8}
   queue-prefix: ${QUEUE_PREFIX:client.}

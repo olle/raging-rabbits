@@ -39,5 +39,6 @@ curl -s -u guest:guest "http://localhost:15672/api/exchanges/%2F/clients.topic/b
   | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['total_count'] if isinstance(d, dict) else len(d))"
 ```
 
-Expected for the default baseline (`CLIENTS=20000`, 7 topic + 3 fanout bindings):
-20000 queues, 140000 bindings on `clients.topic`, 20000 on each `broadcast.*` exchange.
+Expected for the default baseline (`CLIENTS=20000`, 6 contexts × 2 keys + 3 fanouts):
+20000 queues, 40000 bindings on each `<context>.events` exchange, 20000 on each
+`broadcast.*` exchange.

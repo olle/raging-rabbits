@@ -8,14 +8,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * Tunables for the scale test.
  *
- * <p>Baseline scenario: {@code CLIENTS} individual clients (default 20_000), each with one
- * queue, {@code TOPIC_BINDINGS} bindings to the shared topic exchange (default 7, the max of
- * the 5-7 range) and one binding per shared fanout exchange (default 3 exchanges, the max of
- * the 2-3 range).
+ * <p>Topology model: one topic exchange per bounded context (DDD), each client binding
+ * 1-3 routing keys per context exchange, plus one binding per shared fanout exchange
+ * (broadcasts every client receives).
  *
  * <pre>
  * CLIENTS=20000 ./mvnw spring-boot:run
- * CLIENTS=20000 TOPIC_BINDINGS=5 FANOUT_EXCHANGES=broadcast.a,broadcast.b java -jar target/raging-rabbits-*.jar
+ * CLIENTS=20000 TOPIC_CONTEXTS=orders,payments,shipping TOPIC_KEYS=3 java -jar target/raging-rabbits-*.jar
  * </pre>
  */
 @ConfigurationProperties(prefix = "app")
@@ -24,26 +23,37 @@ public class RagingClientsProperties {
   /** Number of client queues to create. Sourced from {@code CLIENTS}. */
   private int clients = 20000;
 
-  /** The shared topic exchange every queue binds to (multiple keys per queue). */
-  private String exchange = "clients.topic";
+  /**
+   * Bounded contexts, one topic exchange each ({@code <context>.<topic-exchange-suffix>}).
+   * Default 6 of the 5-7 range; override with {@code TOPIC_CONTEXTS} (comma-separated).
+   */
+  private List<String> topicContexts =
+      new ArrayList<>(List.of("orders", "payments", "shipping", "notifications", "billing", "inventory"));
 
-  /** Topic bindings per client queue. Keys are {@code <routing-key-prefix><id>.s1..sN}. */
-  private int topicBindings = 7;
+  /** Suffix for per-context topic exchanges: {@code orders} -> {@code orders.events}. */
+  private String topicExchangeSuffix = "events";
+
+  /**
+   * Routing keys bound per client per context exchange (1-3, clamped to max 3).
+   * Keys look like {@code client.000001.order.created}. Default 2 (typical of the 1-3 range).
+   */
+  private int topicKeys = 2;
 
   /** Shared fanout exchanges; each client queue gets one binding to each of them. */
-  private List<String> fanoutExchanges = new ArrayList<>(List.of("broadcast.alpha", "broadcast.beta", "broadcast.gamma"));
-
-  /** Parallel declaration threads. RabbitAdmin is thread-safe; each op uses its own channel. */
-  private int concurrency = 8;
+  private List<String> fanoutExchanges =
+      new ArrayList<>(List.of("broadcast.announcements", "broadcast.alerts", "broadcast.config"));
 
   /** Queue name prefix. Final name is {@code <prefix><zero-padded id>}, e.g. {@code client.000001}. */
   private String queuePrefix = "client.";
 
-  /** Routing key prefix. Final key is {@code <prefix><zero-padded id>}. Defaults to queuePrefix. */
+  /** Routing key prefix. Topic keys are {@code <prefix><id>.<subject>}. Defaults to queuePrefix. */
   private String routingKeyPrefix;
 
   /** Declare queues as durable (survive broker restart). */
   private boolean durable = true;
+
+  /** Parallel declaration threads. RabbitAdmin is thread-safe; each op uses its own channel. */
+  private int concurrency = 8;
 
   /** Log progress every N clients. */
   private int logEvery = 1000;
@@ -56,20 +66,28 @@ public class RagingClientsProperties {
     this.clients = clients;
   }
 
-  public String getExchange() {
-    return exchange;
+  public List<String> getTopicContexts() {
+    return topicContexts;
   }
 
-  public void setExchange(String exchange) {
-    this.exchange = exchange;
+  public void setTopicContexts(List<String> topicContexts) {
+    this.topicContexts = topicContexts;
   }
 
-  public int getTopicBindings() {
-    return topicBindings;
+  public String getTopicExchangeSuffix() {
+    return topicExchangeSuffix;
   }
 
-  public void setTopicBindings(int topicBindings) {
-    this.topicBindings = topicBindings;
+  public void setTopicExchangeSuffix(String topicExchangeSuffix) {
+    this.topicExchangeSuffix = topicExchangeSuffix;
+  }
+
+  public int getTopicKeys() {
+    return topicKeys;
+  }
+
+  public void setTopicKeys(int topicKeys) {
+    this.topicKeys = topicKeys;
   }
 
   public List<String> getFanoutExchanges() {
@@ -78,14 +96,6 @@ public class RagingClientsProperties {
 
   public void setFanoutExchanges(List<String> fanoutExchanges) {
     this.fanoutExchanges = fanoutExchanges;
-  }
-
-  public int getConcurrency() {
-    return concurrency;
-  }
-
-  public void setConcurrency(int concurrency) {
-    this.concurrency = concurrency;
   }
 
   public String getQueuePrefix() {
@@ -110,6 +120,14 @@ public class RagingClientsProperties {
 
   public void setDurable(boolean durable) {
     this.durable = durable;
+  }
+
+  public int getConcurrency() {
+    return concurrency;
+  }
+
+  public void setConcurrency(int concurrency) {
+    this.concurrency = concurrency;
   }
 
   public int getLogEvery() {
