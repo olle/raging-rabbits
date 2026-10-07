@@ -35,6 +35,8 @@ plus `build`, `test`, `clean`.)
 | `KEYS` | `2` | Routing keys per client per context exchange (1–3, at most 3) |
 | `FANOUTS` | `broadcast.announcements,broadcast.alerts,broadcast.config` | Shared fanout exchanges (one binding per queue each) |
 | `CONCURRENCY` | `8` | Parallel declaration threads |
+| `NOISE` | `off` | Messaging noise after provisioning: `low` (5/s), `medium` (25/s), `high` (100/s), or a custom msg/s number |
+| `NOISE_TTL_MS` | `30000` | Per-message TTL for noise (self-cleaning) |
 | `SPRING_RABBITMQ_HOST` / `SPRING_RABBITMQ_PORT` | `localhost` / `5672` | Broker endpoint |
 | `LOG_EVERY` | `1000` | Progress logging interval (clients) |
 

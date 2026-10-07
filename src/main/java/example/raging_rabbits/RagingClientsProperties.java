@@ -55,6 +55,15 @@ public class RagingClientsProperties {
   /** Parallel declaration threads. RabbitAdmin is thread-safe; each op uses its own channel. */
   private int concurrency = 8;
 
+  /**
+   * Messaging noise level: {@code off} (default), {@code low} (5 msg/s), {@code medium}
+   * (25 msg/s), {@code high} (100 msg/s), or a plain number for a custom msg/s rate.
+   */
+  private String noise = "off";
+
+  /** Per-message TTL (ms) for noise so it evaporates instead of filling queues without bound. */
+  private long noiseTtlMs = 30000;
+
   /** Log progress every N clients. */
   private int logEvery = 1000;
 
@@ -128,6 +137,22 @@ public class RagingClientsProperties {
 
   public void setConcurrency(int concurrency) {
     this.concurrency = concurrency;
+  }
+
+  public String getNoise() {
+    return noise;
+  }
+
+  public void setNoise(String noise) {
+    this.noise = noise;
+  }
+
+  public long getNoiseTtlMs() {
+    return noiseTtlMs;
+  }
+
+  public void setNoiseTtlMs(long noiseTtlMs) {
+    this.noiseTtlMs = noiseTtlMs;
   }
 
   public int getLogEvery() {

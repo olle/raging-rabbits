@@ -1,8 +1,6 @@
 package example.raging_rabbits;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -29,26 +27,13 @@ import org.springframework.stereotype.Component;
  *
  * <p>Routing subjects rotate per client ({@code (clientIndex + k) % subjects}) so bindings
  * spread evenly across each context's keyspace instead of piling onto the same subjects.
+ * Key formulas live in {@link ClientKeyspace}, shared with the noise publisher.
  */
 @Component
 @Order(10)
 public class ClientTopologyProvisioner implements ApplicationRunner {
 
   private static final Logger log = LoggerFactory.getLogger(ClientTopologyProvisioner.class);
-
-  /** Bounded-context subjects; unknown contexts fall back to {@link #GENERIC_SUBJECTS}. */
-  private static final Map<String, List<String>> SUBJECTS =
-      Map.of(
-          "orders", List.of("order.created", "order.shipped", "order.cancelled"),
-          "payments", List.of("payment.authorized", "payment.captured", "payment.refunded"),
-          "shipping", List.of("shipment.booked", "shipment.intransit", "shipment.delivered"),
-          "notifications", List.of("notification.queued", "notification.sent", "notification.failed"),
-          "billing", List.of("invoice.issued", "invoice.paid", "invoice.overdue"),
-          "inventory", List.of("stock.reserved", "stock.released", "stock.low"),
-          "support", List.of("ticket.opened", "ticket.escalated", "ticket.closed"));
-
-  private static final List<String> GENERIC_SUBJECTS =
-      List.of("evt.created", "evt.updated", "evt.closed");
 
   private final RagingClientsProperties props;
   private final RabbitAdmin rabbitAdmin;
@@ -79,10 +64,9 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
     int concurrency = Math.max(1, props.getConcurrency());
     int logEvery = Math.max(1, props.getLogEvery());
 
-    String suffix = props.getTopicSuffix();
     List<TopicExchange> topics =
         contexts.stream()
-            .map(c -> new TopicExchange(c + "." + suffix, true, false))
+            .map(c -> new TopicExchange(ClientKeyspace.exchangeName(c, props.getTopicSuffix()), true, false))
             .toList();
     topics.forEach(rabbitAdmin::declareExchange);
     List<FanoutExchange> fanouts =
@@ -91,10 +75,10 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
 
     long bindingsPerClient = (long) contexts.size() * topicKeys + fanouts.size();
     long totalObjects = (long) clients * (1 + bindingsPerClient);
-    int width = Math.max(6, String.valueOf(clients).length());
+    int width = ClientKeyspace.widthFor(clients);
     log.info(
         "Declaring topology: {} clients x (1 queue + {} contexts x {} keys + {} fanout bindings) = {} objects"
-            + " (topics {}, fanouts {}, {} threads). First queue: '{}{}'.",
+            + " (topics {}, fanouts {}, {} threads). First queue: '{}'.",
         clients,
         contexts.size(),
         topicKeys,
@@ -103,8 +87,7 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
         topics.stream().map(TopicExchange::getName).toList(),
         fanoutNames,
         concurrency,
-        props.getQueuePrefix(),
-        pad(1, width));
+        ClientKeyspace.queueName(props.getQueuePrefix(), 1, width));
 
     ExecutorService pool = Executors.newFixedThreadPool(concurrency);
     AtomicInteger done = new AtomicInteger();
@@ -167,31 +150,19 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
       List<TopicExchange> topics,
       int topicKeys,
       List<FanoutExchange> fanouts) {
-    String id = pad(n, width);
     // Classic queue: durable, non-exclusive, non-auto-delete. No args -> lightest possible.
-    Queue queue = new Queue(props.getQueuePrefix() + id, props.isDurable(), false, false);
+    Queue queue = new Queue(ClientKeyspace.queueName(props.getQueuePrefix(), n, width), props.isDurable(), false, false);
     rabbitAdmin.declareQueue(queue);
     for (int c = 0; c < contexts.size(); c++) {
-      List<String> subjects =
-          new ArrayList<>(SUBJECTS.getOrDefault(contexts.get(c), GENERIC_SUBJECTS));
       for (int k = 0; k < topicKeys; k++) {
-        String subject = subjects.get((n + k) % subjects.size());
         rabbitAdmin.declareBinding(
             BindingBuilder.bind(queue)
                 .to(topics.get(c))
-                .with(props.getRoutingKeyPrefix() + id + "." + subject));
+                .with(ClientKeyspace.topicKey(props.getRoutingKeyPrefix(), n, width, contexts.get(c), k)));
       }
     }
     for (FanoutExchange fanout : fanouts) {
       rabbitAdmin.declareBinding(BindingBuilder.bind(queue).to(fanout));
     }
-  }
-
-  private static String pad(int i, int width) {
-    String s = Integer.toString(i);
-    if (s.length() >= width) {
-      return s;
-    }
-    return "0".repeat(width - s.length()) + s;
   }
 }

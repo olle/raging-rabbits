@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest;
       "app.topics=orders,payments",
       "app.keys=1",
       "app.fanouts=test.broadcast",
+      "app.noise=off",
       "app.concurrency=2",
       "app.log-every=5"
     })

@@ -28,6 +28,10 @@ app:
   routing-key-prefix: ${ROUTING_KEY_PREFIX:}
   durable: ${DURABLE:true}
   log-every: ${LOG_EVERY:1000}
+  # Messaging noise after provisioning: off|low (5/s)|medium (25/s)|high (100/s)|<msg/s>.
+  noise: ${NOISE:off}
+  # Per-message TTL for noise so it evaporates instead of filling queues without bound.
+  noise-ttl-ms: ${NOISE_TTL_MS:30000}
 
 management:
   endpoints:

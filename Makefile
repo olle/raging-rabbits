@@ -16,9 +16,10 @@ TOPICS ?= orders,payments,shipping,notifications,billing,inventory
 KEYS ?= 2
 FANOUTS ?= broadcast.announcements,broadcast.alerts,broadcast.config
 CONCURRENCY ?= 8
+NOISE ?= off
 
 BASELINE_ENV = CLIENTS=$(CLIENTS) TOPICS="$(TOPICS)" KEYS=$(KEYS) \
-	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY)
+	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY) NOISE=$(NOISE)
 
 .PHONY: help build test clean
 .PHONY: up-single down-single reset-single baseline-single
@@ -51,7 +52,7 @@ reset-single: ## Fresh reset of the single stack (deletes all broker data)
 	$(COMPOSE) -f brokers/single/compose.yaml down
 	$(COMPOSE) -f brokers/single/compose.yaml up -d
 
-baseline-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. CONCURRENCY=..)
+baseline-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONCURRENCY=..)
 	@echo "waiting for AMQP on localhost:5672..."; \
 	for i in $$(seq 1 60); do nc -z localhost 5672 2>/dev/null && break; sleep 2; done; \
 	$(BASELINE_ENV) SPRING_RABBITMQ_PORT=5672 $(MVN) -q spring-boot:run
