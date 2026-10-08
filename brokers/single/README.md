@@ -19,9 +19,11 @@ docker compose -f brokers/single/compose.yaml down -v
 docker compose -f brokers/single/compose.yaml up -d
 ```
 
-Broker credentials: RabbitMQ 4.x images ship with no default user, so the
-compose file creates one on first boot via `RABBITMQ_USER` /
-`RABBITMQ_PASSWORD` (defaults `guest`/`guest`, matching the app defaults).
+Broker credentials: a fresh node still creates the `guest` user (`guest` /
+`guest`, localhost-only by default). The compose file pins it explicitly via
+`RABBITMQ_USER` / `RABBITMQ_PASSWORD` on first boot (defaults `guest` /
+`guest`, matching the app defaults) — override both sides together if you
+change them.
 
 ## Point the app at it
 

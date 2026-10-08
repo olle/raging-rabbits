@@ -2,9 +2,10 @@ services:
   rabbitmq:
     image: rabbitmq:management
     environment:
-      # RabbitMQ 4.x images ship with no default user; create one on first boot.
-      # Override with RABBITMQ_USER / RABBITMQ_PASSWORD (must match
-      # SPRING_RABBITMQ_USERNAME / SPRING_RABBITMQ_PASSWORD on the app side).
+      # Pin the default user explicitly on first boot (fresh nodes create
+      # guest/guest anyway, localhost-only). Override with RABBITMQ_USER /
+      # RABBITMQ_PASSWORD (must match SPRING_RABBITMQ_USERNAME /
+      # SPRING_RABBITMQ_PASSWORD on the app side).
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     ports:

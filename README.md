@@ -176,22 +176,3 @@ off, 2 drain workers, log monitor) and needs a broker on `localhost:5672`.
   physical connections). Hence virtual-thread workers with one connection each.
 - **Noise is self-cleaning:** per-message TTL plus always-on drain keeps depths
   at ~0 even at full replication.
-
-## Troubleshooting
-
-- **Stopping a run:** Ctrl-C / SIGTERM checkpoints out of provisioning and
-  consumer attach within ~a second (partial topology stays on the broker —
-  reset the stack for a clean rerun). Worker threads are daemon, so nothing
-  holds the JVM past the checkpoints.
-
-- **Fresh stack rejects `guest/guest`:** RabbitMQ 4.x images ship with no
-  default user — `brokers/single/compose.yaml` creates one from
-  `RABBITMQ_USER`/`RABBITMQ_PASSWORD` on first boot. If you changed them,
-  match `SPRING_RABBITMQ_USERNAME`/`PASSWORD` on the app side.
-- **Broker won't boot / `enospc`:** anonymous mnesia volumes orphan on every
-  reset; run `docker volume prune -f` (resets via compose use `down -v`).
-- **Drain row stays `off`:** `CONSUMERS` must be a positive worker count;
-  anything else warns and falls back to 1 worker — the warning echoes the
-  received value.
-- **`make` behaves oddly:** macOS ships GNU Make 3.81 — the Makefile avoids
-  pattern rules + explicit `.PHONY` combinations that version mishandles.

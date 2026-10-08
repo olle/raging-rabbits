@@ -12,8 +12,11 @@ no browser UI and no HTTP API on 15672 — the machine-readable surfaces are:
 - **Local CLIs** via `docker exec` (`rabbitmqctl`, `rabbitmq-diagnostics`,
   `rabbitmq-queues`) for actions: purge, delete, rebalance, health checks.
 
-What you lose vs `single/`: `rabbitmqadmin`, the HTTP API (declare/delete
-over HTTP, definition import/export), and `rabbitmq-top`.
+What you lose vs `single/`: the HTTP API itself and the browser UI that rides
+on it. Note that `rabbitmqadmin` v2 is a standalone binary (separate download,
+not bundled with the broker) — it works against any node with the HTTP API
+enabled, so it stays available on `single/`; on `single-lean/` use
+`rabbitmqctl` / `rabbitmq-diagnostics` via `docker exec` instead.
 
 ## Run
 
