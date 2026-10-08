@@ -6,7 +6,7 @@ Used for client-topology scale tests (queue/binding counts).
 ## Run
 
 ```bash
-make up-single
+make run-single
 # or raw: docker compose -f brokers/single/compose.yaml up -d
 ```
 
@@ -15,7 +15,8 @@ Management UI: http://localhost:15672 (guest/guest). AMQP: `localhost:5672`.
 Fresh reset (deletes all queues/exchanges and the container volume):
 
 ```bash
-make reset-single
+docker compose -f brokers/single/compose.yaml down -v
+docker compose -f brokers/single/compose.yaml up -d
 ```
 
 Broker credentials: RabbitMQ 4.x images ship with no default user, so the
@@ -25,8 +26,8 @@ compose file creates one on first boot via `RABBITMQ_USER` /
 ## Point the app at it
 
 ```bash
-make single            # CLIENTS=20000 default
-make single CLIENTS=5000
+make run-single            # CLIENTS=20000 default
+make run-single CLIENTS=5000
 ```
 
 (`SPRING_RABBITMQ_HOST`/`SPRING_RABBITMQ_PORT` default to `localhost:5672`,

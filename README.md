@@ -19,12 +19,11 @@ broker architectures to serve them.
 ## Quickstart
 
 ```bash
-make single                 # starts brokers/single + runs CLIENTS=20000
-make single CLIENTS=5000
+make run-single                 # starts brokers/single + runs CLIENTS=20000
+make run-single CLIENTS=5000
 ```
 
-(`make help` lists all targets: per-architecture `up/down/reset/baseline`,
-plus `build`, `test`, `clean`.)
+(`make help` shows the available targets.)
 
 While a run is active, a live status screen shows phase, topology progress
 (rate + ETA), and noise throughput — in place on a terminal, or as periodic

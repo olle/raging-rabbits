@@ -1,9 +1,7 @@
-# raging-rabbits — broker stacks + baseline runs.
+# raging-rabbits — run the baseline against the single broker stack.
 #
-#   make help                              # this help (default target)
-#   make up-single                         # start a broker stack
-#   make single CLIENTS=5000               # start stack + run baseline app
-#   make down-single                       # stop a broker stack
+#   make help                      # this help (default target)
+#   make run-single CLIENTS=5000   # start stack + run baseline app
 
 .DEFAULT_GOAL := help
 
@@ -22,66 +20,15 @@ CONSUMERS ?= 1
 BASELINE_ENV = CLIENTS=$(CLIENTS) TOPICS="$(TOPICS)" KEYS=$(KEYS) \
 	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY) NOISE=$(NOISE) CONSUMERS=$(CONSUMERS)
 
-.PHONY: help build test clean
-.PHONY: up-single down-single reset-single single
-.PHONY: up-federated-edges down-federated-edges reset-federated-edges baseline-federated-edges
-.PHONY: up-quorum-cycler down-quorum-cycler reset-quorum-cycler baseline-quorum-cycler
+.PHONY: help run-single
 
 help: ## Show this help (default target)
 	@echo "Usage: make <target> [CLIENTS=20000]"
 	@echo ""
 	@awk 'BEGIN { FS = ":.*## " } /^[a-zA-Z0-9_.-]+:.*## / { printf "  %-24s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-build: ## Package the app (skip tests)
-	$(MVN) -q -DskipTests package
-
-test: up-single ## Start single stack and run the test suite
-	$(MVN) test
-
-clean: ## Maven clean (build output only; broker data untouched)
-	$(MVN) -q clean
-
-# --- single: one RabbitMQ node (brokers/single) -----------------------------
-
-up-single: ## Start the single broker stack
+run-single: ## Start the single stack and run the baseline (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=<workers>)
 	$(COMPOSE) -f brokers/single/compose.yaml up -d
-
-down-single: ## Stop the single broker stack
-	$(COMPOSE) -f brokers/single/compose.yaml down
-
-reset-single: ## Fresh reset of the single stack (deletes all broker data + volumes)
-	$(COMPOSE) -f brokers/single/compose.yaml down -v
-	$(COMPOSE) -f brokers/single/compose.yaml up -d
-
-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=<workers>)
 	@echo "waiting for AMQP on localhost:5672..."; \
 	for i in $$(seq 1 60); do nc -z localhost 5672 2>/dev/null && break; sleep 2; done; \
 	$(BASELINE_ENV) SPRING_RABBITMQ_PORT=5672 $(MVN) -q spring-boot:run
-
-# --- federated-edges: planned (brokers/federated-edges, hidden from help) -----
-
-up-federated-edges: # planned
-	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
-
-down-federated-edges: # planned
-	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
-
-reset-federated-edges: # planned
-	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
-
-baseline-federated-edges: up-federated-edges # planned
-	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
-
-# --- quorum-cycler: planned (brokers/quorum-cycler, hidden from help) ---------
-
-up-quorum-cycler: # planned
-	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
-
-down-quorum-cycler: # planned
-	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
-
-reset-quorum-cycler: # planned
-	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
-
-baseline-quorum-cycler: up-quorum-cycler # planned
-	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
