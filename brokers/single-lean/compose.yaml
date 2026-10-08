@@ -1,0 +1,14 @@
+services:
+  rabbitmq:
+    build: .
+    image: raging-rabbits-single-lean
+    environment:
+      # RabbitMQ 4.x images ship with no default user; create one on first boot.
+      # Override with RABBITMQ_USER / RABBITMQ_PASSWORD (must match
+      # SPRING_RABBITMQ_USERNAME / SPRING_RABBITMQ_PASSWORD on the app side).
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - 5681:5672 # AMQP (offset so this stack runs beside `single`)
+      - 15692:15692 # Prometheus metrics (no auth by default)
+    # NOTE: no 15672 — the management plugin (HTTP API + browser UI) is absent.

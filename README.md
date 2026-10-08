@@ -130,6 +130,9 @@ formatting follows the JVM locale.)
 - [`brokers/single/`](brokers/single/) — **ready.** One node + management UI.
   The baseline target. Includes verify one-liners and the expected
   queue/binding counts.
+- [`brokers/single-lean/`](brokers/single-lean/) — **ready.** One node, no
+  console: Prometheus metrics + internal event exchange instead of the
+  management plugin. The machine-readable stack for CLI/TUI feedback.
 - `brokers/federated-edges/` — **planned.** 3-node leader quorum cluster with
   full-replication exchange federation to single-node edges behind HAProxy.
 - `brokers/quorum-cycler/` — **planned.** 3-node quorum cluster with per-node
