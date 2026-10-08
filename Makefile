@@ -17,12 +17,10 @@ KEYS ?= 2
 FANOUTS ?= broadcast.announcements,broadcast.alerts,broadcast.config
 CONCURRENCY ?= 8
 NOISE ?= off
-CONSUMERS ?= all
-DRAIN_CONNECTIONS ?= 4
+CONSUMERS ?= 8
 
 BASELINE_ENV = CLIENTS=$(CLIENTS) TOPICS="$(TOPICS)" KEYS=$(KEYS) \
-	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY) NOISE=$(NOISE) CONSUMERS=$(CONSUMERS) \
-	DRAIN_CONNECTIONS=$(DRAIN_CONNECTIONS)
+	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY) NOISE=$(NOISE) CONSUMERS=$(CONSUMERS)
 
 .PHONY: help build test clean
 .PHONY: up-single down-single reset-single baseline-single
@@ -51,11 +49,11 @@ up-single: ## Start the single broker stack
 down-single: ## Stop the single broker stack
 	$(COMPOSE) -f brokers/single/compose.yaml down
 
-reset-single: ## Fresh reset of the single stack (deletes all broker data)
-	$(COMPOSE) -f brokers/single/compose.yaml down
+reset-single: ## Fresh reset of the single stack (deletes all broker data + volumes)
+	$(COMPOSE) -f brokers/single/compose.yaml down -v
 	$(COMPOSE) -f brokers/single/compose.yaml up -d
 
-baseline-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=all|off|<n>)
+baseline-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=<workers>|off)
 	@echo "waiting for AMQP on localhost:5672..."; \
 	for i in $$(seq 1 60); do nc -z localhost 5672 2>/dev/null && break; sleep 2; done; \
 	$(BASELINE_ENV) SPRING_RABBITMQ_PORT=5672 $(MVN) -q spring-boot:run

@@ -12,11 +12,15 @@ make up-single
 
 Management UI: http://localhost:15672 (guest/guest). AMQP: `localhost:5672`.
 
-Fresh reset (deletes all queues/exchanges — data lives in the container):
+Fresh reset (deletes all queues/exchanges and the container volume):
 
 ```bash
 make reset-single
 ```
+
+Broker credentials: RabbitMQ 4.x images ship with no default user, so the
+compose file creates one on first boot via `RABBITMQ_USER` /
+`RABBITMQ_PASSWORD` (defaults `guest`/`guest`, matching the app defaults).
 
 ## Point the app at it
 
