@@ -19,8 +19,8 @@ broker architectures to serve them.
 ## Quickstart
 
 ```bash
-make baseline-single            # starts brokers/single + runs CLIENTS=20000
-make baseline-single CLIENTS=5000
+make single                 # starts brokers/single + runs CLIENTS=20000
+make single CLIENTS=5000
 ```
 
 (`make help` lists all targets: per-architecture `up/down/reset/baseline`,

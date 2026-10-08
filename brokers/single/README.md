@@ -25,8 +25,8 @@ compose file creates one on first boot via `RABBITMQ_USER` /
 ## Point the app at it
 
 ```bash
-make baseline-single            # CLIENTS=20000 default
-make baseline-single CLIENTS=5000
+make single            # CLIENTS=20000 default
+make single CLIENTS=5000
 ```
 
 (`SPRING_RABBITMQ_HOST`/`SPRING_RABBITMQ_PORT` default to `localhost:5672`,

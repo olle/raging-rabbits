@@ -2,7 +2,7 @@
 #
 #   make help                              # this help (default target)
 #   make up-single                         # start a broker stack
-#   make baseline-single CLIENTS=5000      # start stack + run baseline app
+#   make single CLIENTS=5000               # start stack + run baseline app
 #   make down-single                       # stop a broker stack
 
 .DEFAULT_GOAL := help
@@ -23,7 +23,7 @@ BASELINE_ENV = CLIENTS=$(CLIENTS) TOPICS="$(TOPICS)" KEYS=$(KEYS) \
 	FANOUTS="$(FANOUTS)" CONCURRENCY=$(CONCURRENCY) NOISE=$(NOISE) CONSUMERS=$(CONSUMERS)
 
 .PHONY: help build test clean
-.PHONY: up-single down-single reset-single baseline-single
+.PHONY: up-single down-single reset-single single
 .PHONY: up-federated-edges down-federated-edges reset-federated-edges baseline-federated-edges
 .PHONY: up-quorum-cycler down-quorum-cycler reset-quorum-cycler baseline-quorum-cycler
 
@@ -53,35 +53,35 @@ reset-single: ## Fresh reset of the single stack (deletes all broker data + volu
 	$(COMPOSE) -f brokers/single/compose.yaml down -v
 	$(COMPOSE) -f brokers/single/compose.yaml up -d
 
-baseline-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=<workers>)
+single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=<workers>)
 	@echo "waiting for AMQP on localhost:5672..."; \
 	for i in $$(seq 1 60); do nc -z localhost 5672 2>/dev/null && break; sleep 2; done; \
 	$(BASELINE_ENV) SPRING_RABBITMQ_PORT=5672 $(MVN) -q spring-boot:run
 
-# --- federated-edges: planned (brokers/federated-edges) ---------------------
+# --- federated-edges: planned (brokers/federated-edges, hidden from help) -----
 
-up-federated-edges: ## [planned] Start the federated-edges stack
+up-federated-edges: # planned
 	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
 
-down-federated-edges: ## [planned] Stop the federated-edges stack
+down-federated-edges: # planned
 	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
 
-reset-federated-edges: ## [planned] Fresh reset of the federated-edges stack
+reset-federated-edges: # planned
 	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
 
-baseline-federated-edges: up-federated-edges ## [planned] Run the baseline against federated-edges
+baseline-federated-edges: up-federated-edges # planned
 	@echo "brokers/federated-edges: planned, not implemented yet (no compose.yaml)"; exit 1
 
-# --- quorum-cycler: planned (brokers/quorum-cycler) -------------------------
+# --- quorum-cycler: planned (brokers/quorum-cycler, hidden from help) ---------
 
-up-quorum-cycler: ## [planned] Start the quorum-cycler stack
+up-quorum-cycler: # planned
 	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
 
-down-quorum-cycler: ## [planned] Stop the quorum-cycler stack
+down-quorum-cycler: # planned
 	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
 
-reset-quorum-cycler: ## [planned] Fresh reset of the quorum-cycler stack
+reset-quorum-cycler: # planned
 	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
 
-baseline-quorum-cycler: up-quorum-cycler ## [planned] Run the baseline against quorum-cycler
+baseline-quorum-cycler: up-quorum-cycler # planned
 	@echo "brokers/quorum-cycler: planned, not implemented yet (no compose.yaml)"; exit 1
