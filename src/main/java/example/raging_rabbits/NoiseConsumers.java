@@ -72,11 +72,20 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
     int width = ClientKeyspace.widthFor(clients);
 
     ExecutorService pool = Executors.newVirtualThreadPerTaskExecutor();
+    List<String> ranges = new ArrayList<>();
     try {
+      // Exact division: each worker gets floor(clients/workers) queues, and the first
+      // (clients % workers) workers get one extra — shards never differ by more than one.
       List<Future<ShardResources>> futures = new ArrayList<>();
+      int base = clients / workers;
+      int remainder = clients % workers;
+      int next = 1;
       for (int w = 0; w < workers; w++) {
-        int from = 1 + w * clients / workers;
-        int to = 1 + (w + 1) * clients / workers;
+        int size = base + (w < remainder ? 1 : 0);
+        int from = next;
+        int to = next + size;
+        next = to;
+        ranges.add("[%d-%d]".formatted(from, to - 1));
         final int worker = w;
         futures.add(pool.submit(() -> attachShard(worker, from, to, width, channelsPerWorker)));
       }
@@ -94,11 +103,11 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
     }
     stats.beginDrain(workers, clients, connections.size(), channels.size());
     log.info(
-        "Drain on: {} workers x ~{} queues across {} connections / {} channels (auto-ack, counting only).",
+        "Drain on: {} workers across {} connections / {} channels (auto-ack, counting only). Shards: {}.",
         workers,
-        clients / workers,
         connections.size(),
-        channels.size());
+        channels.size(),
+        String.join(" ", ranges));
   }
 
   private ShardResources attachShard(int worker, int from, int to, int width, int channelsPerWorker) throws Exception {
