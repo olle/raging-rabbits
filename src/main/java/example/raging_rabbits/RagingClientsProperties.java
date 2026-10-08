@@ -71,16 +71,13 @@ public class RagingClientsProperties {
   private String monitor = "auto";
 
   /**
-   * Drain consumers: {@code all} (default, one auto-ack consumer per client queue),
-   * {@code off}, or a number (first N queues).
+   * Drain workers (virtual threads): each owns one connection and drains a shard of the
+   * client queues, e.g. 1000 clients / 5 workers = 200 queues each. {@code off} disables.
    */
-  private String consumers = "all";
+  private String consumers = "8";
 
-  /** Shared channels the drain consumers multiplex over (spread across drain connections). */
-  private int drainChannels = 16;
-
-  /** Drain connections consumers spread over (isolates delivery dispatch from control RPCs). */
-  private int drainConnections = 4;
+  /** Channels per drain worker connection. */
+  private int drainChannels = 4;
 
   public int getClients() {
     return clients;
@@ -192,13 +189,5 @@ public class RagingClientsProperties {
 
   public void setDrainChannels(int drainChannels) {
     this.drainChannels = drainChannels;
-  }
-
-  public int getDrainConnections() {
-    return drainConnections;
-  }
-
-  public void setDrainConnections(int drainConnections) {
-    this.drainConnections = drainConnections;
   }
 }

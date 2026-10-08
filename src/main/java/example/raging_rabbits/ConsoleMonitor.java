@@ -136,8 +136,8 @@ public class ConsoleMonitor implements ApplicationRunner, DisposableBean {
     if (!stats.drainActive()) {
       return "off";
     }
-    return "on · %,d consumers / %d conns · %d chans · %,d consumed (%,.1f/s)"
-        .formatted(stats.drainConsumers(), stats.drainConnections(), stats.drainChannels(), stats.consumedCount(), stats.drainRate());
+    return "on · %,d workers · %,d queues · %d conns · %,d consumed (%,.1f/s)"
+        .formatted(stats.drainWorkers(), stats.drainQueues(), stats.drainConnections(), stats.consumedCount(), stats.drainRate());
   }
 
   private String oneLiner() {
