@@ -22,6 +22,8 @@ public class RunStats {
 
   private final long appStartNanos = System.nanoTime();
 
+  private volatile boolean cancelled;
+
   private volatile Phase phase = Phase.STARTING;
   private volatile int totalClients;
   private volatile long objectsPerClient;
@@ -82,6 +84,15 @@ public class RunStats {
 
   void done() {
     phase = Phase.DONE;
+  }
+
+  /** Cooperative shutdown flag: every runner checks it, every destroy() sets it. */
+  void cancel() {
+    cancelled = true;
+  }
+
+  boolean isCancelled() {
+    return cancelled;
   }
 
   Phase phase() {

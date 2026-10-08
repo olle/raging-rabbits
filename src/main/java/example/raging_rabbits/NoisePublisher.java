@@ -50,6 +50,11 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
 
   @Override
   public void run(ApplicationArguments args) {
+    // A cancelled predecessor must not start new work.
+    if (stats.isCancelled()) {
+      log.info("Skipping noise: run was cancelled.");
+      return;
+    }
     double rate = rateFor(props.getNoise());
     if (rate <= 0) {
       log.info("Noise off (app.noise='{}'). Topology stays silent.", props.getNoise());
@@ -84,8 +89,9 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
 
   private void loop(double rate, List<Destination> plan) {
     long intervalNanos = (long) (1_000_000_000.0 / rate);
+    long max = Math.max(0, props.getNoiseMax());
     long seq = 0;
-    while (running) {
+    while (running && (max <= 0 || seq < max)) {
       long start = System.nanoTime();
       try {
         publishOne(seq, plan.get((int) (seq % plan.size())));
@@ -102,7 +108,11 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
         break;
       }
     }
-    log.info("Noise stopped after {} messages.", seq);
+    if (max > 0 && seq >= max) {
+      log.info("Noise budget exhausted: {} messages published.", seq);
+    } else {
+      log.info("Noise stopped after {} messages.", seq);
+    }
   }
 
   private void publishOne(long seq, Destination dest) {
@@ -161,6 +171,7 @@ public class NoisePublisher implements ApplicationRunner, DisposableBean {
 
   @Override
   public void destroy() {
+    stats.cancel();
     running = false;
     if (thread != null) {
       thread.interrupt();

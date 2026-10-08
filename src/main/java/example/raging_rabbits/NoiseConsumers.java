@@ -6,6 +6,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -62,6 +64,11 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
 
   @Override
   public void run(ApplicationArguments args) throws Exception {
+    // A cancelled predecessor (e.g. Ctrl-C during provisioning) must not start new work.
+    if (stats.isCancelled()) {
+      log.info("Skipping drain attach: run was cancelled.");
+      return;
+    }
     int workers = resolveWorkers();
     int clients = props.getClients();
     int channelsPerWorker = Math.max(1, props.getDrainChannels());
@@ -86,12 +93,28 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
         futures.add(pool.submit(() -> attachShard(worker, from, to, width, channelsPerWorker)));
       }
       for (Future<ShardResources> future : futures) {
-        try {
-          ShardResources resources = future.get();
-          connections.add(resources.connection());
-          channels.addAll(resources.channels());
-        } catch (ExecutionException e) {
-          throw new IllegalStateException("Drain attach failed", e.getCause());
+        // Checkpoint while waiting so Ctrl-C / SIGTERM ends the run promptly.
+        while (true) {
+          try {
+            ShardResources resources = future.get(1, TimeUnit.SECONDS);
+            connections.add(resources.connection());
+            channels.addAll(resources.channels());
+            break;
+          } catch (TimeoutException e) {
+            if (stats.isCancelled()) {
+              pool.shutdownNow();
+              // System.out: the logging system may already be torn down mid-shutdown.
+              System.out.println("\nDrain attach cancelled: partial consumers. Shutting down.");
+              return;
+            }
+          } catch (ExecutionException e) {
+            if (stats.isCancelled()) {
+              pool.shutdownNow();
+              System.out.println("\nDrain attach cancelled: partial consumers. Shutting down.");
+              return;
+            }
+            throw new IllegalStateException("Drain attach failed", e.getCause());
+          }
         }
       }
     } finally {
@@ -147,6 +170,7 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
 
   @Override
   public void destroy() {
+    stats.cancel();
     // Closing a connection drops all of its consumers server-side at once: no per-consumer
     // cancel RPCs (which could stall the same way registration did under load).
     for (Channel channel : channels) {

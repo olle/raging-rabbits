@@ -64,6 +64,9 @@ public class RagingClientsProperties {
   /** Per-message TTL (ms) for noise so it evaporates instead of filling queues without bound. */
   private long noiseTtlMs = 30000;
 
+  /** Noise budget: stop publishing after this many messages (0 = unbounded). */
+  private long noiseMax = 0;
+
   /**
    * Status monitor rendering: {@code auto} (TTY-aware, default), {@code console} (force ANSI
    * screen), or {@code log} (periodic summary lines).
@@ -165,6 +168,14 @@ public class RagingClientsProperties {
 
   public void setNoiseTtlMs(long noiseTtlMs) {
     this.noiseTtlMs = noiseTtlMs;
+  }
+
+  public long getNoiseMax() {
+    return noiseMax;
+  }
+
+  public void setNoiseMax(long noiseMax) {
+    this.noiseMax = noiseMax;
   }
 
   public String getMonitor() {

@@ -73,6 +73,7 @@ All baseline knobs below can be overridden per invocation, e.g.
 | `CONCURRENCY` | `8` | Parallel topology-declaration threads |
 | `NOISE` | `off` | `low` (5 msg/s), `medium` (25/s), `high` (100/s), or a custom msg/s number |
 | `NOISE_TTL_MS` | `30000` | Per-message TTL for noise — it evaporates instead of filling queues |
+| `NOISE_MAX` | `0` | Noise budget: stop publishing after this many messages (`0` = unbounded) |
 | `CONSUMERS` | `1` | Drain workers (virtual threads); each drains an equal shard of the queues |
 | `DRAIN_CHANNELS` | `4` | Channels per drain worker connection |
 | `DURABLE` | `true` | Declare queues/exchanges durable |
@@ -177,6 +178,11 @@ off, 2 drain workers, log monitor) and needs a broker on `localhost:5672`.
   at ~0 even at full replication.
 
 ## Troubleshooting
+
+- **Stopping a run:** Ctrl-C / SIGTERM checkpoints out of provisioning and
+  consumer attach within ~a second (partial topology stays on the broker —
+  reset the stack for a clean rerun). Worker threads are daemon, so nothing
+  holds the JVM past the checkpoints.
 
 - **Fresh stack rejects `guest/guest`:** RabbitMQ 4.x images ship with no
   default user — `brokers/single/compose.yaml` creates one from

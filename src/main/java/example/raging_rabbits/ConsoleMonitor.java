@@ -161,6 +161,7 @@ public class ConsoleMonitor implements ApplicationRunner, DisposableBean {
     if (scheduler != null) {
       scheduler.shutdownNow();
     }
+    stats.cancel();
     stats.done();
     if (tty) {
       List<String> lines = render();

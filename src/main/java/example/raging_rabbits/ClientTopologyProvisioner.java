@@ -3,6 +3,7 @@ package example.raging_rabbits;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -13,6 +14,20 @@ import org.springframework.amqp.core.FanoutExchange;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.TopicExchange;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.FanoutExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -30,13 +45,15 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Order(10)
-public class ClientTopologyProvisioner implements ApplicationRunner {
+public class ClientTopologyProvisioner implements ApplicationRunner, DisposableBean {
 
   private static final Logger log = LoggerFactory.getLogger(ClientTopologyProvisioner.class);
 
   private final RagingClientsProperties props;
   private final RabbitAdmin rabbitAdmin;
   private final RunStats stats;
+
+  private volatile ExecutorService pool;
 
   public ClientTopologyProvisioner(RagingClientsProperties props, RabbitAdmin rabbitAdmin, RunStats stats) {
     this.props = props;
@@ -90,13 +107,22 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
         concurrency,
         ClientKeyspace.queueName(props.getQueuePrefix(), 1, width));
 
-    ExecutorService pool = Executors.newFixedThreadPool(concurrency);
+    ThreadFactory daemonFactory =
+        r -> {
+          Thread t = new Thread(r, "provision-worker");
+          t.setDaemon(true);
+          return t;
+        };
+    ExecutorService executor = Executors.newFixedThreadPool(concurrency, daemonFactory);
+    pool = executor;
     AtomicReference<RuntimeException> failure = new AtomicReference<>();
     long start = System.nanoTime();
 
-    for (int i = 1; i <= clients && failure.get() == null; i++) {
+    // Checkpoint per client so Ctrl-C / SIGTERM ends the run promptly instead of
+    // waiting out the whole declaration backlog.
+    for (int i = 1; i <= clients && failure.get() == null && !stats.isCancelled(); i++) {
       final int n = i;
-      pool.submit(
+      executor.submit(
           () -> {
             try {
               declareOne(n, width, contexts, topics, topicKeys, fanouts);
@@ -106,19 +132,33 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
             }
           });
     }
-    pool.shutdown();
+    executor.shutdown();
     try {
-      if (!pool.awaitTermination(4, TimeUnit.HOURS)) {
-        pool.shutdownNow();
-        throw new IllegalStateException("Topology declaration timed out");
+      while (!executor.awaitTermination(1, TimeUnit.SECONDS)) {
+        if (stats.isCancelled()) {
+          executor.shutdownNow();
+          // System.out: the logging system may already be torn down mid-shutdown.
+          System.out.printf(
+              "%nProvisioning cancelled: partial topology (%d of %d clients). Shutting down.%n",
+              stats.clientsDone(), clients);
+          return;
+        }
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      pool.shutdownNow();
-      throw new IllegalStateException("Topology declaration interrupted", e);
+      executor.shutdownNow();
+      log.warn("Provisioning interrupted: partial topology. Shutting down.");
+      return;
     }
-    if (failure.get() != null) {
+    if (failure.get() != null && !stats.isCancelled()) {
       throw new IllegalStateException("Topology declaration failed", failure.get());
+    }
+    if (stats.isCancelled()) {
+      // System.out: the logging system may already be torn down mid-shutdown.
+      System.out.printf(
+          "%nProvisioning cancelled: partial topology (%d of %d clients). Shutting down.%n",
+          stats.clientsDone(), clients);
+      return;
     }
     stats.endProvision();
 
@@ -154,6 +194,15 @@ public class ClientTopologyProvisioner implements ApplicationRunner {
     }
     for (FanoutExchange fanout : fanouts) {
       rabbitAdmin.declareBinding(BindingBuilder.bind(queue).to(fanout));
+    }
+  }
+
+  @Override
+  public void destroy() {
+    stats.cancel();
+    ExecutorService executor = pool;
+    if (executor != null) {
+      executor.shutdownNow();
     }
   }
 }
