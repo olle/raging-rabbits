@@ -34,7 +34,7 @@ app:
   # Status overview: auto (TTY-aware)|console (force ANSI screen)|log (summary lines).
   monitor: ${MONITOR:auto}
   # Drain workers (virtual threads), each draining a shard of the client queues.
-  consumers: ${CONSUMERS:8}
+  consumers: ${CONSUMERS:1}
   drain-channels: ${DRAIN_CHANNELS:4}
 
 management:

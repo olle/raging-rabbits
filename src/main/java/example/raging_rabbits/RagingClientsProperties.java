@@ -74,7 +74,7 @@ public class RagingClientsProperties {
    * Drain workers (virtual threads): each owns one connection and drains a shard of the
    * client queues, e.g. 1000 clients / 5 workers = 200 queues each. {@code off} disables.
    */
-  private String consumers = "8";
+  private String consumers = "1";
 
   /** Channels per drain worker connection. */
   private int drainChannels = 4;
