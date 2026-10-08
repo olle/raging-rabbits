@@ -53,7 +53,7 @@ reset-single: ## Fresh reset of the single stack (deletes all broker data + volu
 	$(COMPOSE) -f brokers/single/compose.yaml down -v
 	$(COMPOSE) -f brokers/single/compose.yaml up -d
 
-baseline-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=<workers>|off)
+baseline-single: up-single ## Run the baseline against single (override: CLIENTS=.. KEYS=.. NOISE=low|medium|high CONSUMERS=<workers>)
 	@echo "waiting for AMQP on localhost:5672..."; \
 	for i in $$(seq 1 60); do nc -z localhost 5672 2>/dev/null && break; sleep 2; done; \
 	$(BASELINE_ENV) SPRING_RABBITMQ_PORT=5672 $(MVN) -q spring-boot:run

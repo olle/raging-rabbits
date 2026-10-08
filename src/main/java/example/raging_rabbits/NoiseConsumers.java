@@ -38,7 +38,7 @@ import org.springframework.stereotype.Component;
  *       connection pipeline across the fleet.
  * </ul>
  *
- * <p>{@code app.consumers} / {@code CONSUMERS}: a worker count (default 8), or {@code off}.
+ * <p>{@code app.consumers} / {@code CONSUMERS}: worker count (default 1). Always on.
  */
 @Component
 @Order(15)
@@ -63,10 +63,6 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
   @Override
   public void run(ApplicationArguments args) throws Exception {
     int workers = resolveWorkers();
-    if (workers <= 0) {
-      log.info("Drain workers off (app.consumers='{}').", props.getConsumers());
-      return;
-    }
     int clients = props.getClients();
     int channelsPerWorker = Math.max(1, props.getDrainChannels());
     int width = ClientKeyspace.widthFor(clients);
@@ -137,19 +133,16 @@ public class NoiseConsumers implements ApplicationRunner, DisposableBean {
 
   private int resolveWorkers() {
     String spec = props.getConsumers() == null ? "" : props.getConsumers().trim().toLowerCase();
-    if (spec.isBlank() || spec.equals("off")) {
-      return 0;
-    }
     try {
       int workers = Integer.parseInt(spec);
-      if (workers <= 0) {
-        return 0;
+      if (workers > 0) {
+        return Math.min(workers, Math.max(1, props.getClients()));
       }
-      return Math.min(workers, Math.max(1, props.getClients()));
+      log.warn("Invalid app.consumers='{}', falling back to 1 drain worker.", props.getConsumers());
     } catch (NumberFormatException e) {
-      log.warn("Unknown app.consumers='{}', drain staying off (expected off|<worker count>).", props.getConsumers());
-      return 0;
+      log.warn("Invalid app.consumers='{}', falling back to 1 drain worker (expected a worker count).", props.getConsumers());
     }
+    return 1;
   }
 
   @Override
