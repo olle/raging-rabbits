@@ -40,7 +40,7 @@ Queue count and per-exchange binding counts via the management API:
 ```bash
 curl -s -u guest:guest "http://localhost:15672/api/queues?page=1&page_size=1" \
   | python3 -c "import json,sys; print(json.load(sys.stdin)['total_count'])"
-curl -s -u guest:guest "http://localhost:15672/api/exchanges/%2F/clients.topic/bindings/source?page=1&page_size=1" \
+curl -s -u guest:guest "http://localhost:15672/api/exchanges/%2F/orders.events/bindings/source" \
   | python3 -c "import json,sys; d=json.load(sys.stdin); print(d['total_count'] if isinstance(d, dict) else len(d))"
 ```
 
